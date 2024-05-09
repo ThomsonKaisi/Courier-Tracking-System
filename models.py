@@ -8,6 +8,7 @@ class User(Base):
     __tablename__ = "User"
     
     id = Column(Integer, primary_key=True, index=True)
+    password = Column(String(200))
     name = Column(String(50), index=True)
     bio = Column(String(100), index=True)
     email = Column(String(100), unique=True, index=True)
@@ -32,6 +33,7 @@ class Parcel(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), index=True)
     description = Column(String(100), index=True)
+    status = Column(String(100), index=True)
     sender_id = Column(Integer, ForeignKey('User.id'))
     receiver_id = Column(Integer, ForeignKey('User.id'))
     source_id = Column(Integer, ForeignKey('Station.id'))
@@ -58,3 +60,15 @@ class Station(Base):
     parcels_departed = relationship("Parcel", foreign_keys="Parcel.source_id", back_populates="source")
     parcels_arrived = relationship("Parcel", foreign_keys="Parcel.destination_id", back_populates="destination")
     admins = relationship("Admin", back_populates="station")
+
+class Notification(Base):
+    __tablename__ = "Notification"
+    id = Column(Integer, primary_key=True, index=True)
+    message = Column(String(500))
+    initiator_id = Column(Integer, ForeignKey('User.id'))
+    receiver_id = Column(Integer, ForeignKey('User.id'))
+    on_id = Column(Integer, ForeignKey('Parcel.id'))
+
+    initiator = relationship("User", foreign_keys=[initiator_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+    on = relationship("Parcel", foreign_keys=[on_id])
