@@ -13,21 +13,21 @@ SEED = hash(generate_random_ascii_word())
 
 
 def sign_token(user_id:str):
-    token = hash(user_id+SEED)
+    token = hash(str(user_id)+str(SEED))
     expire = datetime.now() + timedelta(hours=1)
     db = SessionLocal()
     new_auth = Auth(email =user_id,token=token,expire=expire,seed=SEED)
     db.add(new_auth)
     db.commit()
     db.refresh(new_auth)  
-    return {"token":token}
+    return token
 
 
-def verification(user_id:str,token:str):
+def verification(token:str):
     db = SessionLocal()
-    auth_instance = db.query(Auth).filter(Auth.email == user_id).first()
+    auth_instance = db.query(Auth).filter(Auth.token == token).first()
     if auth_instance:
-        generated = hash(user_id+auth_instance.seed)
+        generated = hash(auth_instance.email+auth_instance.seed)
         expire = auth_instance.expire
         if token == generated and datetime.now <expire:
             return True

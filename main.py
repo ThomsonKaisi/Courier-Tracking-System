@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
-from models import Base, User,Parcel
+from models import Base, User,Parcel,Group
 from passlib.hash import bcrypt
 from settings import *
+from authenticator.auth_handler import sign_token
 
 app = FastAPI()
 
@@ -22,11 +23,41 @@ async def register_user(name: str, email: str, password: str, bio: str = None):
     db.commit()
     db.refresh(new_user)
     return {"message": "User registered successfully"}
-@app.post('register_station')
+@app.post('/register_station/')
 async def register_station(parcels_departed):
     pass
 
-@app.post("/register_parcel")
+@app.post('/login/')
+async def login(email:str,password:str):
+    db = SessionLocal()
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        if bcrypt.verify(password, existing_user.password):
+            token =sign_token(email)
+            return {'message':'login successful','token':token}
+        else:
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
+    else:
+        raise HTTPException(status_code=400, detail="The account does not exist")
+            
+
+@app.post('/create_group/')
+async def create_group(name:str,description:str):
+    db = SessionLocal()
+    existing_group = db.query(Group).filter(Group.name == name).first()
+    if existing_group:
+        raise HTTPException(status_code=400, detail="Group Already registere")
+    
+    new_group = Group(name=name,description=description)
+    db.add(new_group)
+    db.commit()
+    db.refresh(new_group)
+    return {'message':'Group registered successfully'}
+
+    
+    
+
+@app.post("/register_parcel/")
 async def register_parcel(name: str, description: str, status: str, sender_id:int, receiver_id:int, source_id:int,destination_id:int ):
     db = SessionLocal()
     new_parcel = Parcel(name=name, description =description, status=status, sender_id=sender_id, receiver_id=receiver_id, source_id=source_id,destination_id=destination_id)
