@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey,DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
+import Da
 Base = declarative_base()
 
 class User(Base):
@@ -13,8 +13,20 @@ class User(Base):
     bio = Column(String(100), index=True)
     email = Column(String(100), unique=True, index=True)
     address = relationship("Address", back_populates="user", uselist=False)
+    group_id = Column(Integer, ForeignKey('Group.id'))
+    group = relationship("Group", back_populates="user", uselist=False)
     parcels_sent = relationship("Parcel", foreign_keys="Parcel.sender_id", back_populates="sender")
     parcels_received = relationship("Parcel", foreign_keys="Parcel.receiver_id", back_populates="receiver")
+    
+class Group(Base):
+    __tablename__ = "Group"
+    id = Column(Integer, primary_key=True, index=True)
+    name =Column(String(50), index=True)
+    description = Column(String(200))
+    user = relationship("User", back_populates="group", uselist=False)
+    
+    
+    
 
 class Address(Base):
     __tablename__ = "Address"
@@ -72,3 +84,11 @@ class Notification(Base):
     initiator = relationship("User", foreign_keys=[initiator_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
     on = relationship("Parcel", foreign_keys=[on_id])
+    
+class Auth(Base):
+    __tablename__="Auth" 
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(100), unique=True, index=True)
+    token = Column(String(200))
+    expire = Column(DateTime)
+    seed = Column(String(20))
