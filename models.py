@@ -13,17 +13,16 @@ class User(Base):
     email = Column(String(100), unique=True, index=True)
     address = relationship("Address", back_populates="user", uselist=False)
     group_id = Column(Integer, ForeignKey('Group.id'))
-    group = relationship("Group", back_populates="user", uselist=False)
+    group = relationship("Group", back_populates="users")
     parcels_sent = relationship("Parcel", foreign_keys="Parcel.sender_id", back_populates="sender")
     parcels_received = relationship("Parcel", foreign_keys="Parcel.receiver_id", back_populates="receiver")
     
 class Group(Base):
     __tablename__ = "Group"
     id = Column(Integer, primary_key=True, index=True)
-    name =Column(String(50), index=True)
-    description = Column(String(200))
-    user = relationship("User", back_populates="group", uselist=False)
-    
+    name = Column(String(50), index=True)
+    description = Column(String(200), index=True)
+    users = relationship("User", back_populates="group")
     
     
 
