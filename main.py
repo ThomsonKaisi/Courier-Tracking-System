@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, Request
-from models import Base, User,Parcel,Group,Auth, Notification
+from models import Base, User,Parcel,Group,Auth, Notification, Address
 from passlib.hash import bcrypt
 from settings import *
 from authenticator.auth_handler import sign_token, verification, user_id
@@ -9,6 +9,9 @@ from sqlalchemy import delete
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
+
+
+#User Routes
 
 @app.post("/register_user/")
 async def register_user(name: str, email: str, password: str, bio: str = None):
@@ -32,54 +35,6 @@ async def register_user(name: str, email: str, password: str, bio: str = None):
 async def register_station(parcels_departed):
     pass
 
-@app.post('/login/')
-async def login(email:str,password:str,):
-    db = SessionLocal()
-    existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
-        if bcrypt.verify(password, existing_user.password):
-            token =sign_token(email)
-            return {'message':'login successful','token':token}
-        else:
-            raise HTTPException(status_code=400, detail="Incorrect username or password")
-    else:
-        raise HTTPException(status_code=400, detail="The account does not exist")
-    
-@app.post('/logout/')
-async def logout(token:str):
-    if verification(token):
-        delete_query = delete(Auth).where(Auth.token == token)
-        db = SessionLocal()
-        db.execute(delete_query)
-        db.commit()
-        return {'message':'logout successful'}
-    else:
-        raise HTTPException(status_code=400, detail="Can not logout unauthenticated user!")
-            
-
-@app.post('/create_group/')
-async def create_group(name:str,description:str,token:str):
-    db = SessionLocal()
-    existing_group = db.query(Group).filter(Group.name == name).first()
-    if existing_group:
-        raise HTTPException(status_code=400, detail="Group Already registered")
-    
-    new_group = Group(name=name,description=description)
-    db.add(new_group)
-    db.commit()
-    db.refresh(new_group)
-    return {'message':'Group registered successfully'}
-
-    
-@app.post("/register_parcel/")
-async def register_parcel(name: str, description: str, status: str, sender_id:int, receiver_id:int, source_id:int,destination_id:int,token:str):
-    db = SessionLocal()
-    new_parcel = Parcel(name=name, description =description, status=status, sender_id=sender_id, receiver_id=receiver_id, source_id=source_id,destination_id=destination_id)
-    
-    db.add(new_parcel)
-    db.commit()
-    db.refresh()
-    return {"message":"Parcel registered successfully"}
 
 @app.post("/notification/")
 async def get_notification(token:str):
@@ -94,7 +49,7 @@ async def get_notification(token:str):
             return {"notifications":[]}
     else:
         raise HTTPException(status_code=400, detail="un aunthenticated user!")
-    
+  #tracking received parcels  
 @app.post("/track_received/")
 async def track_parcel(token:str):
     
@@ -119,6 +74,8 @@ async def track_sent(token:str):
             return {"parcels":[parcel_instance.name for parcel in parcel_instance],}
         else:
             return {"parcels":[]}
+    else:
+        raise HTTPException(status_code=400, detail="un aunthenticated user!")
 
 #basic account Information
 
@@ -129,18 +86,114 @@ async def account_info(token:str):
          db =SessionLocal()
          User_instance = db.query(User).filter(User.id == id).first()
          return {"user":[User_instance.name,User_instance.email,User_instance.bio]}
+    else:
+        raise HTTPException(status_code=400, detail="un aunthenticated user!")
     
 
+#Adding or updating address
+@app.post("/update_address/")
+async def update_address(token:str,district:str,box_number:str,area:str,description:str):
+    if verification(token):
+        id = user_id(token)
+        db =SessionLocal()
+         # Check if address already exists
+        address_instance = db.query(Address).filter(Address.user_id == id).first()
+        if address_instance:
+            # Update existing address
+            address_instance.area=area
+            address_instance.box_number=box_number
+            address_instance.district =district
+            address_instance.description=description
+            db.commit()
+            return {"message":"Address Updated Successfully"}
+        else:
+            # Create new Address
+            new_address= Address(area=area,description=description,box_number=box_number,district=district,user_id=id)
+            db.add(new_address)
+            db.commit()
+            db.refresh(new_address)
+            return {"message":"Address Added Successfully"}
+    else:
+        raise HTTPException(status_code=400, detail=" unaunthenticated user!")    
 
 
 
+# Admin Routes
 
 
 
-
-
-
+@app.post("/register_parcel/")
+async def register_parcel(name: str, description: str, status: str, sender_id:int, receiver_id:int, source_id:int,destination_id:int,token:str):
+    db = SessionLocal()
+    new_parcel = Parcel(name=name, description =description, status=status, sender_id=sender_id, receiver_id=receiver_id, source_id=source_id,destination_id=destination_id)
     
+    db.add(new_parcel)
+    db.commit()
+    db.refresh()
+    return {"message":"Parcel registered successfully"} 
+
+@app.post('/create_group/')
+async def create_group(name:str,description:str,token:str):
+    db = SessionLocal()
+    existing_group = db.query(Group).filter(Group.name == name).first()
+    if existing_group:
+        raise HTTPException(status_code=400, detail="Group Already registered")
+    
+    new_group = Group(name=name,description=description)
+    db.add(new_group)
+    db.commit()
+    db.refresh(new_group)
+    return {'message':'Group registered successfully'}
+
+
+
+
+#General Routes
+
+
+
+
+@app.post('/login/')
+async def login(email:str,password:str,):
+    db = SessionLocal()
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        if bcrypt.verify(password, existing_user.password):
+            token =sign_token(email)
+            return {'message':'login successful','token':token}
+        else:
+            raise HTTPException(status_code=400, detail="Incorrect username or password")
+    else:
+        raise HTTPException(status_code=400, detail="The account does not exist")
+    
+@app.post('/logout/')
+async def logout(token:str):
+    if verification(token):
+        delete_query = delete(Auth).where(Auth.token == token)
+        db = SessionLocal()
+        db.execute(delete_query)
+        db.commit()
+        return {'message':'logout successful'}
+    else:
+        raise HTTPException(status_code=400, detail="Can not logout unauthenticated user!")
+
+#Changing password
+
+@app.post("/update_password/")
+async def update_password(token:str,password:str):
+    if verification(token):
+         id = user_id(token)
+         hashed_password = bcrypt.hash(password)
+         db =SessionLocal()
+         User_instance = db.query(User).filter(User.id == id).first()
+         User_instance.password=hashed_password
+         db.commit()
+         return {"message":"password updated successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="un aunthenticated user!")
+            
+
+
 
 if __name__ == "__main__":
     import uvicorn
