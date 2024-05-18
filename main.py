@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
-from models import Base, User,Parcel,Group,Auth
+from fastapi import FastAPI, Request
+from models import Base, User,Parcel,Group,Auth, Notification
 from passlib.hash import bcrypt
 from settings import *
-from authenticator.auth_handler import sign_token, verification
+from authenticator.auth_handler import sign_token, verification, user_id
 from sqlalchemy import delete
 
 app = FastAPI()
@@ -32,7 +33,7 @@ async def register_station(parcels_departed):
     pass
 
 @app.post('/login/')
-async def login(email:str,password:str):
+async def login(email:str,password:str,):
     db = SessionLocal()
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
@@ -70,8 +71,6 @@ async def create_group(name:str,description:str,token:str):
     return {'message':'Group registered successfully'}
 
     
-    
-
 @app.post("/register_parcel/")
 async def register_parcel(name: str, description: str, status: str, sender_id:int, receiver_id:int, source_id:int,destination_id:int,token:str):
     db = SessionLocal()
@@ -81,6 +80,64 @@ async def register_parcel(name: str, description: str, status: str, sender_id:in
     db.commit()
     db.refresh()
     return {"message":"Parcel registered successfully"}
+
+@app.post("/notification/")
+async def get_notification(token:str):
+    
+    if verification(token):
+        user_id = user_id(token)
+        db = SessionLocal()
+        notifications = db.query(Notification).filter(Notification.receiver_id == user_id).all()
+        if notifications:
+            return {"notifications":[notifications.message for notification in notifications ]}
+        else:
+            return {"notifications":[]}
+    else:
+        raise HTTPException(status_code=400, detail="un aunthenticated user!")
+    
+@app.post("/track_received/")
+async def track_parcel(token:str):
+    
+    if verification(token):
+        id = user_id(token)
+        db = SessionLocal()
+        parcel_instance = db.query(Parcel).filter(Parcel.receiver_id ==id).all()
+        if parcel_instance:
+            return {"parcels":[parcel_instance.name for parcel in parcel_instance]}
+        else:
+            return {"parcels":[]}
+    else:
+        raise HTTPException(status_code=400, detail="un aunthenticated user!")
+#tracking sent parcels
+@app.post("/track_sent/")
+async def track_sent(token:str):
+    if verification(token):
+        id=user_id(token)
+        db = SessionLocal()
+        parcel_instance = db.query(Parcel).filter(Parcel.sender_id ==id).all()
+        if parcel_instance:
+            return {"parcels":[parcel_instance.name for parcel in parcel_instance],}
+        else:
+            return {"parcels":[]}
+
+#basic account Information
+
+@app.post("/account_info/")
+async def account_info(token:str):
+    if verification(token):
+         id = user_id(token)
+         db =SessionLocal()
+         User_instance = db.query(User).filter(User.id == id).first()
+         return {"user":[User_instance.name,User_instance.email,User_instance.bio]}
+    
+
+
+
+
+
+
+
+
 
 
     
