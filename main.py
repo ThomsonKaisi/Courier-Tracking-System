@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, Request
-from models import Base, User,Parcel,Group,Auth, Notification, Address
+from models import Base, User,Parcel,Group,Auth, Notification, Address, OTP
 from passlib.hash import bcrypt
 from settings import *
-from authenticator.auth_handler import sign_token, verification, user_id
+from authenticator.auth_handler import sign_token, verification, user_id, user_email, password_transfer,otp_generator,otp_verification
 from sqlalchemy import delete
+from messages import PASSWORD, REGISTER
+from SMS_notifications import send_SMS
 
 app = FastAPI()
 
@@ -14,23 +16,27 @@ Base.metadata.create_all(bind=engine)
 #User Routes
 
 @app.post("/register_user/")
-async def register_user(name: str, email: str, password: str, bio: str = None):
+async def register_user(name: str, email: str, password: str,phone:str, bio: str = None):
     # Check if the email already exists
     db = SessionLocal()
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    existing_phone = db.query(User).filter(User.phone == phone).first()
+    if existing_user or existing_phone:
+        raise HTTPException(status_code=400, detail="Email already registered or Phone Number Already Registered")
 
     # Hash the password
     
     hashed_password = bcrypt.hash(password)
-    new_user = User(name=name, email=email, password=hashed_password, bio=bio)
+    otp = otp_generator(email,hashed_password)
+    message = f"{REGISTER} OTP:{otp}"
+    send_SMS(phone,message)
+    new_user = User(name=name, email=email, bio=bio,phone=phone)
     group = db.query(Group).filter(Group.id == 1).first()
     new_user.group =group
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return {"message": "User registered successfully"}
+    return {"message": f"OTP has been sent to {phone}"}
 
 @app.post('/register_station/')
 async def register_station(parcels_departed):
@@ -171,17 +177,29 @@ async def logout(token:str):
 #Changing password
 
 @app.post("/update_password/")
-async def update_password(token:str,password:str):
-    if verification(token):
-         id = user_id(token)
-         hashed_password = bcrypt.hash(password)
-         db =SessionLocal()
-         User_instance = db.query(User).filter(User.id == id).first()
-         User_instance.password=hashed_password
-         db.commit()
-         return {"message":"password updated successfully"}
+async def update_password(email:str,new_password:str):
+    db =SessionLocal()
+    user_instance = db.query(User).filter(User.email==email).first()
+    if user_instance:
+         hashed_password = bcrypt.hash(new_password)
+         otp =otp_generator(email,hashed_password)
+         phone = str(user_instance.phone)
+         message = f"{PASSWORD} OTP:{otp}."
+         send_SMS(phone,message)
+         return {"message":"An OTP has been sent to Your Mobile"}
     else:
-        raise HTTPException(status_code=400, detail="un aunthenticated user!")
+        raise HTTPException(status_code=400, detail="Email or user does not exist!")
+    
+@app.post("/otp_verification/")
+async def verifying_otp(otp:int):
+    if otp_verification(otp):
+        db = SessionLocal()
+        otp_instance = db.query(OTP).filter(OTP.otp_token==otp).first()
+        password_transfer(otp_instance.email)
+        return {"message":"Password Changed Successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
             
 
 

@@ -2,7 +2,7 @@ import random
 import string
 from datetime import datetime, timedelta
 from settings import *
-from models import Base,Auth, User,Group
+from models import Base,Auth, User,Group, OTP
 from sqlalchemy import delete
 from fastapi import HTTPException
 from passlib.hash import bcrypt
@@ -76,4 +76,44 @@ def user_id(token:str):
     user_instance = db.query(User).filter(User.email ==user_email).first()
     return user_instance.id
 
+def otp_generator(email:str,password:str):
+    otp_pin =random.randint(10000, 99999)
+    db =SessionLocal()
+    otp_instance = db.query(OTP).filter(OTP.email==email).first()
+    if otp_instance:
+        otp_instance.email = email
+        otp_instance.expire = datetime.now() + timedelta(minutes=10)
+        otp_instance.otp_token = otp_pin
+        otp_instance.password =password
+        db.commit()
+        return otp_pin
+    else:
+        new_otp = OTP(email=email,expire=(datetime.now() + timedelta(minutes=10)),otp_token=otp_pin,password=password)
+        db.add(new_otp)
+        db.commit()
+        db.refresh(new_otp)
+        return otp_pin
+
+def otp_verification(otp_pin:int):
+    db = SessionLocal()
+    otp_instance = db.query(OTP).filter(OTP.otp_token==otp_pin).first()
+    if otp_instance:
+        if datetime.now() < otp_instance.expire:
+            return True
+        else:
+            return False
+    else:
+        return False
+    
+def user_email(token:str):
+    db =SessionLocal()
+    auth_instance = db.query(Auth).filter(Auth.token == token).first()
+    return auth_instance.email
+#Transfering  password from otp table to user table
+def password_transfer(email:str):
+    db =SessionLocal()
+    user_instance = db.query(User).filter(User.email==email).first()
+    otp_instance = db.query(OTP).filter(OTP.email==email).first()
+    user_instance.password =otp_instance.password
+    db.commit()
 

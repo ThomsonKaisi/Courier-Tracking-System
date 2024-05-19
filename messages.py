@@ -1,0 +1,2 @@
+PASSWORD ="Greetings From Nexus Courier Services. Please use the OTP below complete your password change request.OTP will expire in 10min:"
+REGISTER = "Thanks for Registering with Us. Use below OTP For Comfirmation:"

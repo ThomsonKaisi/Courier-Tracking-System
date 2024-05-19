@@ -8,6 +8,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     password = Column(String(200))
+    phone = Column(String(20), unique=True, index=True)
     name = Column(String(50), index=True)
     bio = Column(String(100), index=True)
     email = Column(String(100), unique=True, index=True)
@@ -90,3 +91,11 @@ class Auth(Base):
     token = Column(String(200))
     expire = Column(DateTime)
     seed = Column(String(20))
+
+class OTP(Base):
+    __tablename__="Otp" 
+    id = Column(Integer, primary_key=True, index=True)
+    expire = Column(DateTime)
+    password = Column(String(200))
+    email = Column(String(100), unique=True, index=True)
+    otp_token = Column(Integer)
