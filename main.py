@@ -31,6 +31,7 @@ async def register_user(name: str, email: str, password: str, bio: str = None):
     db.commit()
     db.refresh(new_user)
     return {"message": "User registered successfully"}
+
 @app.post('/register_station/')
 async def register_station(parcels_departed):
     pass
@@ -116,11 +117,7 @@ async def update_address(token:str,district:str,box_number:str,area:str,descript
     else:
         raise HTTPException(status_code=400, detail=" unaunthenticated user!")    
 
-
-
 # Admin Routes
-
-
 
 @app.post("/register_parcel/")
 async def register_parcel(name: str, description: str, status: str, sender_id:int, receiver_id:int, source_id:int,destination_id:int,token:str):
@@ -145,13 +142,7 @@ async def create_group(name:str,description:str,token:str):
     db.refresh(new_group)
     return {'message':'Group registered successfully'}
 
-
-
-
 #General Routes
-
-
-
 
 @app.post('/login/')
 async def login(email:str,password:str,):
@@ -166,7 +157,7 @@ async def login(email:str,password:str,):
     else:
         raise HTTPException(status_code=400, detail="The account does not exist")
     
-@app.post('/logout/')
+@app.post("/logout/")
 async def logout(token:str):
     if verification(token):
         delete_query = delete(Auth).where(Auth.token == token)

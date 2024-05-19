@@ -67,7 +67,7 @@ def group_verification(user_id:str):
     db =SessionLocal()
     user_instance = db.query(User).filter(User.email == user_id).first()
     group_instance = db.query(Group).filter(Group.id == user_instance.group_id).first()
-    return group_instance.name
+    return {"name":group_instance.name,"id":group_instance.id}
 
 def user_id(token:str):
     db =SessionLocal()
