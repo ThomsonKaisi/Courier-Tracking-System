@@ -109,6 +109,13 @@ def user_email(token:str):
     db =SessionLocal()
     auth_instance = db.query(Auth).filter(Auth.token == token).first()
     return auth_instance.email
+
+#getting user id after passing a phone number
+def get_user_id(phone:str):
+    db = SessionLocal()
+    existing_phone = db.query(User).filter(User.phone == phone).first()
+    return existing_phone.id
+
 #Transfering  password from otp table to user table
 def password_transfer(email:str):
     db =SessionLocal()
