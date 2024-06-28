@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, Request
-from models import Base, User,Parcel,Group,Auth, Notification, Address, OTP
+from models import Base, User,Parcel,Group,Auth, Notification, Address, OTP, Station
 from passlib.hash import bcrypt
 from settings import *
 from authenticator.auth_handler import sign_token, verification, user_id, user_email, password_transfer,otp_generator,otp_verification
@@ -39,8 +39,17 @@ async def register_user(name: str, email: str, password: str,phone:str, bio: str
     return {"message": f"OTP has been sent to {phone}"}
 
 @app.post('/register_station/')
-async def register_station(parcels_departed):
-    pass
+async def register_station(name:str,location:str):
+    db = SessionLocal()
+    existing_station = db.query(Station).filter(Station.name == name).first()
+    if existing_station:
+        raise HTTPException(status_code=400, detail="station already registered!")
+    new_station = Station(name=name,location=location)
+    db.add(new_station)
+    db.commit()
+    db.refresh()
+    return {"message":"station registered successfully!"}
+
 
 
 @app.post("/notification/")

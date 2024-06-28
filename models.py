@@ -70,6 +70,7 @@ class Station(Base):
     name = Column(String(100))
     parcels_departed = relationship("Parcel", foreign_keys="Parcel.source_id", back_populates="source")
     parcels_arrived = relationship("Parcel", foreign_keys="Parcel.destination_id", back_populates="destination")
+    location = Column(String(100))
     admins = relationship("Admin", back_populates="station")
 
 class Notification(Base):
