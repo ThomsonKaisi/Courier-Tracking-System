@@ -27,7 +27,8 @@ async def register_user(name: str, email: str, password: str,phone:str, bio: str
     return {"message": f"OTP has been sent to {phone}"}
 
 @app.post('/register_station/')
-async def register_station(name:str,location:str):
+async def register_station(token:str,name:str,location:str):
+    
     db = SessionLocal()
     existing_station = db.query(Station).filter(Station.name == name).first()
     if existing_station:

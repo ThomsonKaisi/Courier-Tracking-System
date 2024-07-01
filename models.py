@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey,DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey,DateTime,Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 Base = declarative_base()
@@ -17,6 +17,7 @@ class User(Base):
     group = relationship("Group", back_populates="users")
     parcels_sent = relationship("Parcel", foreign_keys="Parcel.sender_id", back_populates="sender")
     parcels_received = relationship("Parcel", foreign_keys="Parcel.receiver_id", back_populates="receiver")
+    status = Column(Boolean,default=True)
     
 class Group(Base):
     __tablename__ = "Group"
